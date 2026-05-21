@@ -2,18 +2,19 @@ from engine.symbols import (
     BAR, BELL, CHERRY, LEMON, ORANGE, PLUM, SCATTER, SEVEN, WILD,
 )
 
-# Multipliers × line bet.
-# Scatter is the exception — it multiplies × total bet (evaluated separately).
+# Payout multipliers expressed in units of line bet (= total bet / LINE_COUNT).
+# Calibrated to a target total RTP of ~96% (verified by 1M-spin Monte Carlo —
+# see simulate_rtp.py and MATH_MODEL.md).
 PAYOUTS: dict[str, dict[int, float]] = {
-    SEVEN:   {3: 50,   4: 200,  5: 1000},
-    WILD:    {3: 100,  4: 500,  5: 2500},
-    BAR:     {3: 25,   4: 100,  5: 500},
-    BELL:    {3: 15,   4: 60,   5: 250},
-    CHERRY:  {3: 10,   4: 40,   5: 150},
-    PLUM:    {3: 8,    4: 30,   5: 100},
-    ORANGE:  {3: 5,    4: 20,   5: 60},
-    LEMON:   {3: 5,    4: 15,   5: 50},
-    SCATTER: {3: 5,    4: 20,   5: 100},
+    SEVEN:   {3: 52,   4: 218,  5: 1032},
+    WILD:    {3: 103,  4: 516,  5: 2580},
+    BAR:     {3: 26,   4: 103,  5: 516},
+    BELL:    {3: 17,   4: 65,   5: 258},
+    CHERRY:  {3: 10,   4: 44,   5: 159},
+    PLUM:    {3: 9,    4: 30,   5: 103},
+    ORANGE:  {3: 5,    4: 21,   5: 65},
+    LEMON:   {3: 5,    4: 16,   5: 52},
+    # SCATTER pays no money — 3 anywhere awards FREE_SPINS_COUNT free spins only.
 }
 
 # 20 paylines — each tuple is (row_reel0, row_reel1, …, row_reel4).

@@ -56,8 +56,16 @@ def spin(req: SpinRequest) -> SpinResponse:
     grid = build_grid(session.reel_strips)
     winlines, total_win, teasing_reels, free_spins_awarded = evaluate_spin(grid, req.bet)
 
-    session.balance = round(session.balance + total_win, 2)
+    session.balance   = round(session.balance + total_win, 2)
     session.total_won = round(session.total_won + total_win, 2)
+    session.spin_log.append({
+        "n":       session.rounds_played,
+        "bet":     req.bet,
+        "free":    req.isFreeSpins,
+        "win":     total_win,
+        "scatter": free_spins_awarded > 0,
+        "bal":     session.balance,
+    })
 
     return SpinResponse(
         grid=grid,
@@ -67,6 +75,47 @@ def spin(req: SpinRequest) -> SpinResponse:
         freeSpinsAwarded=free_spins_awarded,
         balance=session.balance,
     )
+
+
+@router.get("/session/{session_id}/stats")
+def session_stats(session_id: str) -> dict:
+    """Read-only stats for math verification.  No game state is changed.
+
+    Call after playing any number of spins:
+      GET http://localhost:8000/api/session/<sessionId>/stats
+    Returns observed RTP, hit frequency, scatter rate, and the full spin log.
+    """
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    log        = session.spin_log
+    n_total    = len(log)
+    paid       = [s for s in log if not s["free"]]
+    n_paid     = len(paid)
+
+    wagered    = round(sum(s["bet"] for s in paid), 2)
+    won_total  = round(sum(s["win"] for s in log), 2)
+    obs_rtp    = round(won_total / wagered, 6) if wagered > 0 else 0.0
+    hit_freq   = round(sum(1 for s in paid if s["win"] > 0) / n_paid, 6) if n_paid > 0 else 0.0
+    scatters   = sum(1 for s in log if s["scatter"])
+    scat_rate  = round(scatters / n_paid, 6) if n_paid > 0 else 0.0
+
+    return {
+        "sessionId":             session_id,
+        "totalSpins":            n_total,
+        "paidSpins":             n_paid,
+        "freeSpins":             n_total - n_paid,
+        "totalWagered":          wagered,
+        "totalWon":              won_total,
+        "observedRTP":           obs_rtp,
+        "theoreticalRTP":        0.9650,
+        "hitFrequency":          hit_freq,
+        "scatterTriggers":       scatters,
+        "observedScatterRate":   scat_rate,
+        "theoreticalScatterRate": 0.006526,
+        "log":                   log,
+    }
 
 
 @router.post("/buy-bonus", response_model=SpinResponse)

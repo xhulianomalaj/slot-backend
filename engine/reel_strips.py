@@ -5,20 +5,25 @@ from engine.symbols import (
 )
 
 # Strip weights — each value is how many times that symbol appears on the strip.
-# Higher count = more stops = higher probability of landing in the 3-row window.
-# Outer reels (0, 4) are weighted heavier on low-value symbols so long combos
-# are rare, keeping RTP well-controlled on 5-of-a-kind pays.
+# All reels use exactly 33 stops with exactly 1 scatter each.
+#
+# Scatter maths (hypergeometric, s=1, n=33):
+#   P(scatter visible on any reel) = 3/33 = 9.09%
+#   P(trigger ≥3 scatter across grid) ≈ 0.653% → 1 in ~153 spins
+#   P(near-miss, exactly 2 scatter)  ≈ 6.2%  → 1 in ~16 spins
+#
+# Reel 4 is the hardest to complete premium 5-of-a-kind (fewest seven/bar).
 STRIP_WEIGHTS: list[dict[str, int]] = [
-    # Reel 0 — leftmost
-    {CHERRY: 8, LEMON: 7, ORANGE: 6, PLUM: 5, BELL: 4, BAR: 3, SEVEN: 2, WILD: 1, SCATTER: 2},
-    # Reel 1
-    {CHERRY: 7, LEMON: 7, ORANGE: 6, PLUM: 5, BELL: 4, BAR: 3, SEVEN: 2, WILD: 1, SCATTER: 2},
-    # Reel 2 — middle: one extra scatter for near-miss anticipation
-    {CHERRY: 7, LEMON: 6, ORANGE: 5, PLUM: 5, BELL: 4, BAR: 3, SEVEN: 2, WILD: 1, SCATTER: 3},
-    # Reel 3
-    {CHERRY: 8, LEMON: 7, ORANGE: 6, PLUM: 5, BELL: 4, BAR: 3, SEVEN: 2, WILD: 1, SCATTER: 2},
-    # Reel 4 — rightmost: hardest reel to complete 5-of-a-kind
-    {CHERRY: 9, LEMON: 8, ORANGE: 6, PLUM: 5, BELL: 4, BAR: 3, SEVEN: 2, WILD: 1, SCATTER: 2},
+    # Reel 0 — leftmost  (total: 33)
+    {CHERRY: 7, LEMON: 6, ORANGE: 5, PLUM: 4, BELL: 4, BAR: 3, SEVEN: 2, WILD: 1, SCATTER: 1},
+    # Reel 1              (total: 33)
+    {CHERRY: 6, LEMON: 6, ORANGE: 5, PLUM: 4, BELL: 4, BAR: 3, SEVEN: 2, WILD: 2, SCATTER: 1},
+    # Reel 2 — middle    (total: 33)
+    {CHERRY: 7, LEMON: 6, ORANGE: 5, PLUM: 4, BELL: 4, BAR: 3, SEVEN: 2, WILD: 1, SCATTER: 1},
+    # Reel 3              (total: 33)
+    {CHERRY: 6, LEMON: 6, ORANGE: 5, PLUM: 4, BELL: 4, BAR: 3, SEVEN: 2, WILD: 2, SCATTER: 1},
+    # Reel 4 — rightmost (total: 33) — fewer premium symbols, harder to 5-of-a-kind
+    {CHERRY: 8, LEMON: 7, ORANGE: 5, PLUM: 4, BELL: 3, BAR: 3, SEVEN: 1, WILD: 1, SCATTER: 1},
 ]
 
 

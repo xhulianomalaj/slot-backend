@@ -1,10 +1,35 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
 .venv/
 venv/
 env/
+
+# Environment / secrets
 .env
-*.egg-info/
+.env.local
+.env.*.local
+
+# Build output
 dist/
-.pytest_cache/
+build/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

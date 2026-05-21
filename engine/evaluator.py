@@ -1,9 +1,13 @@
 from engine.paytable import LINE_COUNT, PAYLINES, PAYOUTS
 from engine.reel_strips import spin_reel
-from engine.symbols import SCATTER, WILD
+from engine.symbols import CHERRY, SCATTER, WILD
 
-# Free-spins awarded per scatter count (3→10, 4→15, 5→20).
-FREE_SPINS_MAP: dict[int, int] = {3: 10, 4: 15, 5: 20}
+# Scatters only award free spins — no monetary payout.
+# Exactly 3 scatters trigger 10 free spins; no more than 3 appear on the grid.
+FREE_SPINS_COUNT = 10
+SCATTER_TRIGGER = 3
+# Symbol used to replace any scatter beyond the cap of 3.
+_SCATTER_FILL = CHERRY
 
 
 # ─── Grid ─────────────────────────────────────────────────────────────────────
@@ -58,7 +62,7 @@ def _evaluate_payline(
     }
 
 
-# ─── Scatter evaluation ───────────────────────────────────────────────────────
+# ─── Scatter helpers ─────────────────────────────────────────────────────────
 
 def _find_scatter_positions(grid: list[list[str]]) -> list[dict]:
     return [
@@ -69,21 +73,17 @@ def _find_scatter_positions(grid: list[list[str]]) -> list[dict]:
     ]
 
 
-def _evaluate_scatter(grid: list[list[str]], total_bet: float) -> dict | None:
-    positions = _find_scatter_positions(grid)
-    if len(positions) < 3:
-        return None
+def _cap_scatters(grid: list[list[str]]) -> list[dict]:
+    """Ensure at most SCATTER_TRIGGER scatters appear in the grid.
 
-    match_count = min(len(positions), 5)
-    multiplier = PAYOUTS.get(SCATTER, {}).get(match_count, 0)
-    amount = round(total_bet * multiplier, 2)
-    return {
-        "lineId": 0,
-        "symbolId": SCATTER,
-        "matchCount": match_count,
-        "amount": amount,
-        "positions": positions,
-    }
+    Any scatter beyond the cap is replaced in-place with _SCATTER_FILL so the
+    response never contains 4 or 5 scatter symbols.
+    Returns the (possibly trimmed) list of scatter positions.
+    """
+    positions = _find_scatter_positions(grid)
+    for extra in positions[SCATTER_TRIGGER:]:
+        grid[extra["reel"]][extra["row"]] = _SCATTER_FILL
+    return positions[:SCATTER_TRIGGER]
 
 
 # ─── Full round evaluation ────────────────────────────────────────────────────
@@ -99,8 +99,31 @@ def evaluate_spin(
         winlines            — list of Winline dicts ready for the API response
         total_win           — sum of all winline amounts (rounded to 2 dp)
         teasing_reels       — reel indices to animate (exactly 2 scatters landed)
-        free_spins_awarded  — 10 / 15 / 20 for 3 / 4 / 5 scatters, else 0
+        free_spins_awarded  — FREE_SPINS_COUNT when 3 scatters land, else 0
+
+    Rules:
+        • Scatters award free spins only — no monetary payout.
+        • At most SCATTER_TRIGGER (3) scatters appear; extras are capped.
+        • When the scatter trigger fires, all payline wins are discarded.
     """
+    # Cap the grid to at most 3 scatters and get their positions.
+    scatter_positions = _cap_scatters(grid)
+    scatter_count = len(scatter_positions)
+
+    # Scatter trigger: award free spins and discard all payline wins.
+    # Return a zero-amount scatter winline so the frontend can animate the
+    # scatter symbols (glow highlight) without showing any monetary value.
+    if scatter_count >= SCATTER_TRIGGER:
+        scatter_wl = {
+            "lineId": 0,
+            "symbolId": SCATTER,
+            "matchCount": scatter_count,
+            "amount": 0.0,
+            "positions": scatter_positions,
+        }
+        return [scatter_wl], 0.0, [], FREE_SPINS_COUNT
+
+    # No trigger — evaluate paylines normally.
     line_bet = round(bet / LINE_COUNT, 6)
     winlines: list[dict] = []
 
@@ -109,19 +132,11 @@ def evaluate_spin(
         if wl:
             winlines.append(wl)
 
-    scatter_wl = _evaluate_scatter(grid, bet)
-    if scatter_wl:
-        winlines.append(scatter_wl)
-
-    scatter_positions = _find_scatter_positions(grid)
-    scatter_count = len(scatter_positions)
-
+    # Teasing reels: exactly 2 scatters landed (near-miss anticipation).
     teasing_reels: list[int] = []
     if scatter_count == 2:
         scatter_reels = {p["reel"] for p in scatter_positions}
         teasing_reels = [r for r in range(5) if r not in scatter_reels]
 
-    free_spins_awarded = FREE_SPINS_MAP.get(min(scatter_count, 5), 0) if scatter_count >= 3 else 0
     total_win = round(sum(wl["amount"] for wl in winlines), 2)
-
-    return winlines, total_win, teasing_reels, free_spins_awarded
+    return winlines, total_win, teasing_reels, 0

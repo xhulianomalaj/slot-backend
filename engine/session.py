@@ -20,6 +20,9 @@ class Session:
     rounds_played: int = 0
     total_wagered: float = 0.0
     total_won: float = 0.0
+    # Per-spin log — used by the /stats endpoint for math verification.
+    # Each entry: {n, bet, free, win, scatter, bal}
+    spin_log: list[dict] = field(default_factory=list)
 
 
 # In-memory session store. Replace with Redis / DB for production.
