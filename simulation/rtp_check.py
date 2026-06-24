@@ -3,7 +3,7 @@ RTP simulation — run N spins and verify the paytable produces the expected RTP
 
 Usage:
     python -m simulation.rtp_check
-    python -m simulation.rtp_check --spins 1000000 --bet 1.0 --target 0.96
+    python -m simulation.rtp_check --spins 1000000 --bet 1.0 --target 0.97
 """
 import argparse
 import sys
@@ -11,7 +11,7 @@ import sys
 from engine.evaluator import build_grid, evaluate_spin
 from engine.reel_strips import build_all_strips
 
-TARGET_RTP = 0.96
+TARGET_RTP = 0.97
 TOLERANCE  = 0.005   # ±0.5%
 SPINS      = 10_000_000
 BET        = 1.0

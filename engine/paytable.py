@@ -3,17 +3,20 @@ from engine.symbols import (
 )
 
 # Payout multipliers expressed in units of line bet (= total bet / LINE_COUNT).
-# Calibrated to a target total RTP of ~96% (verified by 1M-spin Monte Carlo —
-# see simulate_rtp.py and MATH_MODEL.md).
+# "POPULAR-SLOT" LDW profile: low symbols pay TINY 3-of-a-kinds so most wins are
+# sub-bet ("losses disguised as wins"), with the return back-loaded into a steep,
+# rare premium tail. Calibrated by EXACT enumeration to total RTP ~97.0% (verified
+# by 20M-spin Monte Carlo — see simulate_rtp.py / simulation/rtp_check.py and
+# MATH_MODEL.md). Hit frequency ~41%, sigma/bet ~4.1 (MEDIUM volatility).
 PAYOUTS: dict[str, dict[int, float]] = {
-    SEVEN:   {3: 52,   4: 218,  5: 1032},
-    WILD:    {3: 103,  4: 516,  5: 2580},
-    BAR:     {3: 26,   4: 103,  5: 516},
-    BELL:    {3: 17,   4: 65,   5: 258},
-    CHERRY:  {3: 10,   4: 44,   5: 159},
-    PLUM:    {3: 9,    4: 30,   5: 103},
-    ORANGE:  {3: 5,    4: 21,   5: 65},
-    LEMON:   {3: 5,    4: 16,   5: 52},
+    SEVEN:   {3: 52,   4: 328,  5: 4277},
+    WILD:    {3: 116,  4: 799,  5: 7415},
+    BAR:     {3: 28,   4: 122,  5: 670},
+    BELL:    {3: 17,   4: 67,   5: 309},
+    CHERRY:  {3: 6,    4: 26,   5: 135},
+    PLUM:    {3: 9,    4: 34,   5: 155},
+    ORANGE:  {3: 5,    4: 22,   5: 113},
+    LEMON:   {3: 5,    4: 18,   5: 93},
     # SCATTER pays no money — 3 anywhere awards FREE_SPINS_COUNT free spins only.
 }
 

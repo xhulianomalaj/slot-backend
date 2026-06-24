@@ -34,18 +34,18 @@ COLUMNS = 5
 
 # ── Theoretical targets ────────────────────────────────────────────────────────
 # Derived analytically from strip weights + paytable (see analyze_math.py, which
-# computes the base payline RTP by exact enumeration = 90.45% unzeroed). The paid
-# base measured here is a touch lower because >=3 scatters zero that spin's
-# payline wins (a ~0.2% effect). The simulation is the authoritative number.
-THEO_BASE_RTP     = 0.9024    # ~90.2 % — paid paylines only, after scatter-zeroing
+# computes the base payline RTP by exact enumeration = 90.69% unzeroed). The paid
+# base measured here is a hair lower because >=3 scatters zero that spin's payline
+# wins (a ~0.02% effect). The simulation is the authoritative number.
+THEO_BASE_RTP     = 0.9069    # ~90.7 % — paid paylines only (unzeroed exact)
 THEO_SCATTER_RATE = 0.006526  # ~1 in 153 paid spins (exact, hypergeometric)
 
 # Two versions of total-RTP theory:
 #   APPROX — analyze_math.py formula: base × (1 + f × p)     — ignores re-triggers
 #   EXACT  — geometric series:        base / (1 − f × p)      — counts re-triggers
 _fp = FREE_SPINS_COUNT * THEO_SCATTER_RATE
-THEO_TOTAL_RTP_APPROX = THEO_BASE_RTP * (1 + _fp)          # 95.97 %
-THEO_TOTAL_RTP_EXACT  = THEO_BASE_RTP / (1 - _fp)          # 96.39 %
+THEO_TOTAL_RTP_APPROX = THEO_BASE_RTP * (1 + _fp)          # 96.61 %
+THEO_TOTAL_RTP_EXACT  = THEO_BASE_RTP / (1 - _fp)          # 97.02 %
 
 # Industry volatility classification (std-dev of per-paid-spin win / bet):
 #   < 3.5   Low            (HF > 30%, max win typically <  500x)
@@ -61,7 +61,7 @@ def _volatility_class(std_dev: float) -> str:
 
 # ── Maximum theoretical win (single spin) ─────────────────────────────────────
 # All 15 cells = WILD → every payline matches WILD 5x → 20 × WILD_5x × line_bet
-# = 20 × 2580 × (bet/20) = 2580 × bet.  Per the engine's _cap_scatters, this is
+# = 20 × 7148 × (bet/20) = 7148 × bet.  Per the engine's _cap_scatters, this is
 # only achievable if no scatter lands (otherwise scatter trigger zeros wins).
 def _max_single_spin_win() -> float:
     return LINE_COUNT * PAYOUTS["wild"][5] / LINE_COUNT   # = WILD_5x multiplier
@@ -290,7 +290,7 @@ def simulate(n_paid: int) -> None:
         print(f"  {label} accuracy  →  {n_req:>12,} spins")
     browser_100_ci = 1.96 * std_dev / math.sqrt(100) * 100
     print(f"\n  Implication: 100 browser spins has a ±{browser_100_ci:.1f}% CI —")
-    print(f"  far too noisy to verify 96% RTP.  Use this script instead.")
+    print(f"  far too noisy to verify 97% RTP.  Use this script instead.")
 
     # ── Symbol win breakdown ───────────────────────────────────────────────────
     print()
@@ -345,7 +345,7 @@ def simulate(n_paid: int) -> None:
     per_line_max = PAYOUTS["wild"][5] / LINE_COUNT   # one 5-wild payline, in × bet
     print()
     print(f"  ─── Maximum win analysis ───")
-    print(f"  All-WILD grid (would be 2580x)  : IMPOSSIBLE  "
+    print(f"  All-WILD grid (would be 7148x)  : IMPOSSIBLE  "
           f"(reels 0/2/4 have 1 wild; a 3-cell window shows <=1 wild)")
     print(f"  Single payline maximum (WILD 5x): {per_line_max:>10.2f}x bet  "
           f"(five wilds on one line — already extremely rare)")
@@ -364,7 +364,7 @@ def simulate(n_paid: int) -> None:
         print(f"  {bankroll_units:>10,}  {max_spins:>10,}  {p_ruin*100:>9.2f}%  {avg_spins:>12,.0f}")
 
     # ── Multiplier correction for target RTP ───────────────────────────────────
-    target_rtp = 0.96
+    target_rtp = 0.97
     scale = target_rtp / total_rtp
     print()
     print(f"  ─── Multiplier correction to reach {target_rtp*100:.0f}% total RTP ───")

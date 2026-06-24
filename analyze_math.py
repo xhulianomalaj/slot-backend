@@ -258,8 +258,8 @@ total_hi = float(rtp) * mult_fs                       # ignores scatter-zeroing 
 total_lo = float(rtp) * (1 - pt) * mult_fs            # crude (1-P) zeroing proxy
 print(f"  Scatter trigger P(>=3) = {pt*100:.4f}%   free-spin multiplier 1/(1-{_FS}*P) = {mult_fs:.4f}")
 print(f"  Total RTP estimate (closed-form bracket): {total_lo*100:.3f}%  ..  {total_hi*100:.3f}%")
-print(f"  --> Monte-Carlo (simulate_rtp.py) is authoritative; it lands at ~96.5%.")
-print(f"  Target band: 94-97%   {'IN RANGE' if 0.94 <= (total_lo+total_hi)/2 <= 0.97 else 'OUT OF RANGE'}")
+print(f"  --> Monte-Carlo (simulate_rtp.py) is authoritative; it lands at ~97.0%.")
+print(f"  Target band: 96.5-97.5%   {'IN RANGE' if 0.965 <= total_hi <= 0.975 else 'OUT OF RANGE'}")
 print()
 print("  RTP breakdown by symbol (base game, paylines only):")
 print(f"  {'Symbol':<10}  {'RTP contrib (x3)':>18}  {'RTP contrib (x4)':>18}  {'RTP contrib (x5)':>18}")

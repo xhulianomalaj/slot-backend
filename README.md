@@ -5,8 +5,9 @@ spin outcome is generated and evaluated server-side; the client merely renders
 what the server returns. Fully verifiable RTP, hit frequency, and volatility
 via two independent tools (closed-form analysis + Monte Carlo simulation).
 
-> **Certified RTP: 96.9 %** (5,000,000-spin Monte Carlo, ± 0.23 % at 95 % CI)
-> Volatility: **LOW** (σ / bet = 2.60) — see [`MATH_MODEL.md`](MATH_MODEL.md).
+> **Certified RTP: 97.0 %** (20,000,000-spin Monte Carlo, ± 0.17 % at 95 % CI)
+> Volatility: **MEDIUM** (σ / bet ≈ 3.9–4.0) — popular-slot LDW profile with a
+> steep, rare top tail. See [`MATH_MODEL.md`](MATH_MODEL.md).
 
 ---
 

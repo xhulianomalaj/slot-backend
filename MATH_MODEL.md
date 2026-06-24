@@ -1,9 +1,9 @@
 # Slot Game Math Model
 
-**Game:** Classic 5-Reel Video Slot
-**Document Version:** 1.1
+**Game:** Popular-Slot 5-Reel Video Slot (LDW profile)
+**Document Version:** 1.2
 **Engine Reference:** `slot-backend/engine/`
-**Verification Method:** Monte Carlo (5,000,000 paid spins) + closed-form analysis
+**Verification Method:** Monte Carlo (20,000,000 paid spins) + closed-form analysis
 
 ---
 
@@ -57,20 +57,26 @@ Multipliers are expressed in units of **line bet** (`bet / 20`).
 
 | Symbol | 3-of-a-kind | 4-of-a-kind | 5-of-a-kind |
 | ------ | ----------: | ----------: | ----------: |
-| WILD   |         103 |         516 |       2,580 |
-| SEVEN  |          52 |         218 |       1,032 |
-| BAR    |          26 |         103 |         516 |
-| BELL   |          17 |          65 |         258 |
-| CHERRY |          10 |          44 |         159 |
-| PLUM   |           9 |          30 |         103 |
-| ORANGE |           5 |          21 |          65 |
-| LEMON  |           5 |          16 |          52 |
+| WILD   |         116 |         799 |       7,415 |
+| SEVEN  |          52 |         328 |       4,277 |
+| BAR    |          28 |         122 |         670 |
+| BELL   |          17 |          67 |         309 |
+| PLUM   |           9 |          34 |         155 |
+| CHERRY |           6 |          26 |         135 |
+| ORANGE |           5 |          22 |         113 |
+| LEMON  |           5 |          18 |          93 |
 
 SCATTER pays no line credits; its only function is to award free spins.
 
+This is a **"popular-slot" LDW (losses-disguised-as-wins) paytable**: the low
+symbols (CHERRY, LEMON, ORANGE, PLUM, BELL) still pay 3-of-a-kind, but only tiny
+sub-bet amounts, so most "wins" return less than the stake. The return is
+back-loaded into a steep, rare premium tail (SEVEN/WILD 5-of-a-kind).
+
 > **Display note:** these multipliers are in *line-bet* units. On a 20-line bet
-> the headline figures divide by 20 in *total-bet* terms — e.g. WILD ×5 = 2,580
-> line units = **129 × total bet** on one line; SEVEN ×5 = **51.6 × total bet**.
+> the headline figures divide by 20 in *total-bet* terms — e.g. WILD ×5 = 7,415
+> line units = **371 × total bet** on one line; SEVEN ×5 = 4,277 line units =
+> **214 × total bet**.
 
 ---
 
@@ -114,7 +120,7 @@ engine's exact payout rule: the left-to-right run with WILD substitution,
 paying the **greater** of the substituted-symbol combination and a leading
 pure-WILD combination. See `analyze_math.py`. This enumeration is
 shuffle-independent and matches the Monte Carlo base RTP to floating-point
-precision (`R_b ≈ 90.80 %`).
+precision (`R_b ≈ 90.949 %` unzeroed).
 
 ### 5.2 Total RTP with free-spin feature
 
@@ -127,50 +133,59 @@ $$
 The `(1 - p_t)` factor approximates the engine zeroing payline wins on any spin
 where the scatter trigger fires. It is a close estimate only; the exact
 scatter-zeroing loss is captured by the Monte Carlo (§5.3), which is
-authoritative.
+authoritative. With `R_b = 90.949 %`, the closed-form bracket (low estimate with
+the `(1 - p_t)` zeroing proxy, high estimate without it — the unzeroed upper
+bound is 97.30 %) lands at **≈ 96.7 % – 97.3 %**, centred on the certified
+≈ 97.0 %.
 
-### 5.3 Certified figures (5,000,000-spin Monte Carlo)
+### 5.3 Certified figures (20,000,000-spin Monte Carlo)
 
-| Metric                     |        Value | 95 % CI half-width |
-| -------------------------- | -----------: | -----------------: |
-| **Total RTP**              |  **97.05 %** |          ± 0.23 %  |
-| Base-game RTP (paid only)  |     90.80 %  |          ± 0.23 %  |
-| Free-spin contribution     |      6.24 %  |                    |
-| House edge `1 − R`         |      2.95 %  |                    |
-| Scatter trigger rate       |     0.647 %  |          ± 0.002 % |
-| Hit frequency (paid spins) |     41.78 %  |                    |
+| Metric                          |        Value | 95 % CI half-width |
+| ------------------------------- | -----------: | -----------------: |
+| **Total RTP** (shuffle-avg)     |  **≈ 97.0 %**|          ± 0.17 %  |
+| Base-game RTP, unzeroed (exact) |    90.949 %  |                    |
+| Base-game RTP, paid only (sim)  |     90.59 %  |          ± 0.17 %  |
+| Free-spin contribution          |      6.34 %  |                    |
+| House edge `1 − R`              |      3.07 %  |                    |
+| Scatter trigger rate            |     0.654 %  |          ± 0.002 % |
+| Hit frequency (paid spins)      |     41.29 %  |                    |
 
-Independent re-shuffled runs span **96.83 % – 97.05 %** total RTP. Because the
-strips are re-shuffled once per session (`build_all_strips`) and a spin reads
-three *consecutive* strip positions, the strip ORDER mildly affects the
-scatter-zeroing correlation (the per-line marginals — and thus the 90.80 % base
-— are shuffle-independent). The shuffle-averaged certified RTP is therefore
-**≈ 96.9 %**, stated conservatively. The closed-form base enumeration (§5.1)
-yields the same 90.80 % base, in agreement with the simulation.
+Independent multi-shuffle Monte Carlo runs measured **97.06 % – 97.12 %** total
+RTP; the single 20 M run above (one shuffle) read 96.94 %. Because the strips
+are re-shuffled once per session (`build_all_strips`) and a spin reads three
+*consecutive* strip positions, the scatter-void couples paylines to scatter
+positions, so the strip ORDER mildly affects total RTP (≈ ±0.2 % per
+arrangement; single sessions span **96.3 % – 97.2 %**). The per-line marginals
+— and thus the **90.949 %** unzeroed base — are shuffle-independent. The
+shuffle-averaged certified RTP is therefore **≈ 97.0 %**. The closed-form base
+enumeration (§5.1) yields the same 90.949 % base, in agreement with the
+simulation (paid base reads 90.59 % once the scatter-void zeroing is applied).
 
 ### 5.4 Convergence
 
 | Sample size required | Confidence interval (95 %) on total RTP |
 | -------------------- | --------------------------------------- |
-|        10,390 spins  | ± 5 %                                   |
-|       259,751 spins  | ± 1 %                                   |
-|    25,975,103 spins  | ± 0.1 %                                 |
+|        22,284 spins  | ± 5 %                                   |
+|       557,108 spins  | ± 1 %                                   |
+|    55,710,879 spins  | ± 0.1 %                                 |
 
-A live player completing 100 spins has a ± 51 % CI around the long-run RTP —
-short-term observation has no diagnostic value.
+These sample sizes scale with `σ² ≈ 3.81²`; the higher MEDIUM-volatility σ
+(§6) roughly doubles the spins needed for a given accuracy versus the previous
+low-volatility tuning. A live player completing 100 spins has a ± 74.6 % CI
+around the long-run RTP — short-term observation has no diagnostic value.
 
 ---
 
 ## 6. Volatility
 
-| Statistic                     | Value      | Interpretation             |
-| ----------------------------- | ---------- | -------------------------- |
-| Std-dev of per-spin total win | 2.60 × bet | **LOW volatility**         |
-| Hit frequency (any payout)    | 41.78 %    | Frequent small wins        |
-| % spins paying 0 < x ≤ 1×     | 21.56 %    | Consolation (sub-bet) wins |
-| % spins paying ≥ 5×           | 4.69 %     | Moderate "good win" rate   |
-| % spins paying ≥ 20×          | 0.26 %     | Rare big-win events        |
-| % spins paying ≥ 100×         | 0.0002 %   | Extremely rare huge wins   |
+| Statistic                     | Value      | Interpretation               |
+| ----------------------------- | ---------- | ---------------------------- |
+| Std-dev of per-spin total win | 3.81 × bet | **MEDIUM volatility**        |
+| Hit frequency (any payout)    | 41.29 %    | Frequent small wins (LDW)    |
+| % spins paying 0 < x ≤ 1×     | 21.35 %    | Sub-bet LDW "wins"           |
+| % spins paying ≥ 5×           | 5.21 %     | Moderate "good win" rate     |
+| % spins paying ≥ 20×          | 0.29 %     | Rare big-win events          |
+| % spins paying ≥ 100×         | 0.016 %    | Extremely rare huge wins     |
 
 **Industry classification cutoffs** (std-dev / bet):
 
@@ -181,42 +196,51 @@ short-term observation has no diagnostic value.
 | High       | 6–9     |
 | Very High  | > 9     |
 
-A `σ/bet = 2.60` profile is consistent with classic-style slots optimised for
-session length over jackpot drama. Note that ~21.6 % of spins are **sub-bet
-"consolation" wins** (a payout smaller than the stake), so the game pays
-*something* on ~42 % of spins but returns *more than the stake* on only ~20.9 %.
+At `σ/bet ≈ 3.8–4.0` (mildly shuffle-dependent) the game sits in the **MEDIUM**
+band — a "popular-slot" LDW profile with a steep, rare top tail rather than a
+session-length grind. The defining feature is the **losses-disguised-as-wins
+(LDW)** structure: ~21.3 % of spins are **sub-bet "wins"** (a payout smaller
+than the stake), so although the game pays *something* on ~41 % of spins, it
+returns *more than the stake* on only ~20 %. In fact **over half of all
+*winning* spins pay less than the bet** (~21.3 % sub-bet out of ~41.9 % total
+winning spins ≈ 51 %), the textbook LDW signature.
 
 ---
 
 ## 7. Win-Size Distribution
 
-From the 5 M-spin certification run:
+From the 20 M-spin certification run:
 
 | Win range (× bet)        | Frequency | 1 in N spins |
 | ------------------------ | --------: | -----------: |
-| 0 (loss)                 |  57.574 % |          1.7 |
-| 0 < x ≤ 1   (small)      |  21.561 % |          4.6 |
-| 1 < x ≤ 5   (modest)     |  16.172 % |          6.2 |
-| 5 < x ≤ 20  (good)       |   4.436 % |         22.5 |
-| 20 < x ≤ 100 (big)       |   0.257 % |          390 |
-| 100 < x ≤ 500 (huge)     |  0.0002 % |      454,545 |
+| 0 (loss)                 |  58.063 % |          1.7 |
+| 0 < x ≤ 1   (small)      |  21.347 % |          4.7 |
+| 1 < x ≤ 5   (modest)     |  15.381 % |          6.5 |
+| 5 < x ≤ 20  (good)       |   4.924 % |         20.3 |
+| 20 < x ≤ 100 (big)       |   0.270 % |        370.7 |
+| 100 < x ≤ 500 (huge)     |   0.016 % |      6,439.2 |
 | > 500 (mega)             |        0  |            – |
+
+The bottom two bands (small + modest) are the LDW core; the `huge` band is the
+rare premium tail. No single observed spin exceeded 500 × bet across 20 M spins.
 
 ---
 
 ## 8. Maximum Theoretical Win
 
-The paytable's combinatorial maximum is **2,580 × bet** — every line paying
-WILD 5-of-a-kind, which requires **all 15 visible cells to display WILD**. Given
-the strip composition (reels 0/2/4 carry only one WILD each), this is
-**unreachable** from a single spin: those reels can never show three WILDs in
-three consecutive stops. The single-payline maximum is WILD 5-of-a-kind =
-2,580 line-bet units = **129 × total bet**; a spin can stack several winning
-lines above that.
+The paytable's combinatorial maximum is **7,415 × bet** — every line paying
+WILD 5-of-a-kind (20 × 7,415 line-bet = 148,300 line-bet = 7,415 × total bet),
+which requires **all 15 visible cells to display WILD**. Given the strip
+composition (reels 0/2/4 carry only one WILD each), this is **unreachable** from
+a single spin: those reels can never show three WILDs in three consecutive
+stops, so a 3-cell window shows ≤ 1 WILD. The single-payline maximum is WILD
+5-of-a-kind = 7,415 line-bet units = **371 × total bet**; a spin can stack
+several winning lines above that.
 
-The realised maximum across 5 M certified spins was **174.55 × bet**; across
-independent runs the observed ceiling is **~175 – 220 × bet** — the realistic
-max-win figure, far below the unreachable 2,580 × paytable cap.
+The realised maximum across 20 M certified spins was **452.25 × bet**; across
+independent runs the observed ceiling is **~390 – 460 × bet** (multi-line
+stacking) — the realistic max-win figure, far below the unreachable 7,415 ×
+paytable cap.
 
 ---
 
@@ -226,14 +250,16 @@ Flat-bet player; 2,000 independent trials per scenario.
 
 | Starting bankroll | Spin limit | P(ruin) | Avg spins played |
 | ----------------: | ---------: | ------: | ---------------: |
-|       50 × bet    |        100 |   1.70 %|              100 |
-|      100 × bet    |        200 |   0.10 %|              200 |
+|       50 × bet    |        100 |   3.65 %|               99 |
+|      100 × bet    |        200 |   0.35 %|              200 |
 |      200 × bet    |        500 |   0.00 %|              500 |
 |      500 × bet    |      1,000 |   0.00 %|            1,000 |
 |    1,000 × bet    |      2,000 |   0.00 %|            2,000 |
 
-A 100-bet bankroll has effectively zero short-session ruin risk — consistent
-with low volatility and frequent small wins.
+A 50-bet bankroll now carries a ~3.7 % short-session ruin risk and a 100-bet
+bankroll ~0.35 % — both higher than the previous low-volatility tuning, as
+expected for a MEDIUM-volatility LDW game where the return is back-loaded into a
+rare premium tail and most "wins" are sub-bet.
 
 ---
 
@@ -248,8 +274,8 @@ with low volatility and frequent small wins.
    - Determine `base` symbol = first non-WILD non-SCATTER on the payline.
    - Count the leading run where each symbol equals `base` or `WILD`.
    - Each line pays the **greater** of the substituted-symbol combination and a
-     leading pure-WILD combination (e.g. 3 WILDs = WILD ×3 (103) beats LEMON ×5
-     (52)); lookup `(symbol, count)` in the paytable; multiply by `line_bet`.
+     leading pure-WILD combination (e.g. 3 WILDs = WILD ×3 (116) beats LEMON ×5
+     (93)); lookup `(symbol, count)` in the paytable; multiply by `line_bet`.
    - 4th and 5th SCATTERs on a single grid are replaced by CHERRY by
      `_cap_scatters` (free-spin count caps at one award per spin).
    - On scatter trigger, payline wins on that spin are zeroed and free spins
@@ -265,15 +291,15 @@ with low volatility and frequent small wins.
 
 | Item                       | Result                              |
 | -------------------------- | ----------------------------------- |
-| RTP target                 | ~96 % ± 1 %                         |
-| RTP measured (5 M spins)   | 97.05 % ± 0.23 % (within target)    |
-| RTP repeatability (runs)   | 96.83 %, 96.94 %, 97.05 %  →  mean ≈ 96.9 % |
-| Volatility class           | LOW (σ/bet 2.60)                    |
+| RTP target                 | ~97 % ± 1 %                         |
+| RTP measured (20 M spins)  | ~97.0 – 97.1 % shuffle-averaged (within target) |
+| RTP repeatability (runs)   | 96.94 % (1 shuffle), 97.06 – 97.12 % multi-shuffle → mean ≈ 97.0 % |
+| Volatility class           | MEDIUM (σ/bet ≈ 3.9–4.0; 3.81 this run) |
 | Engine determinism         | Verified — identical seed produces identical sequence |
-| Math vs. engine agreement  | Closed-form base 90.80 % = sim base 90.80 % |
+| Math vs. engine agreement  | Closed-form base 90.949 % (unzeroed) = sim base (90.59 % paid after scatter-void) |
 
 The game is mathematically certified for deployment with a stated RTP of
-**96.9 %** (shuffle-averaged; individual runs span 96.8 – 97.1 %).
+**97.0 %** (shuffle-averaged; individual sessions span 96.3 – 97.2 %).
 
 ---
 
@@ -286,8 +312,8 @@ cd slot-backend
 # Closed-form analysis
 python analyze_math.py
 
-# Certification run (5 M spins, ~2 min)
-python simulate_rtp.py 5000000
+# Certification run (20 M spins, ~8 min)
+python simulate_rtp.py 20000000
 ```
 
 Both scripts use the exact production code path; no shadow implementation
