@@ -1,14 +1,16 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SpinRequest(BaseModel):
-    bet: float
+    # bet must be positive; the route additionally checks it is on the official
+    # bet ladder. gt=0 alone blocks the negative-bet balance-minting exploit.
+    bet: float = Field(gt=0)
     sessionId: str | None = None
     isFreeSpins: bool = False
 
 
 class BuyBonusRequest(BaseModel):
-    bet: float
+    bet: float = Field(gt=0)
     sessionId: str | None = None
 
 

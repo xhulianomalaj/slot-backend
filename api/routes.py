@@ -8,16 +8,27 @@ from api.models import (
     SpinResponse,
 )
 from engine.evaluator import FREE_SPINS_COUNT, build_grid, evaluate_spin
-from engine.session import DEFAULT_BET, Session, create_session, get_session
+from engine.session import AVAILABLE_BETS, DEFAULT_BET, Session, create_session, get_session
 from engine.symbols import SCATTER
 
 router = APIRouter()
 
+
+def _validate_bet(bet: float) -> None:
+    """Reject any stake not on the official bet ladder.
+
+    Guards against negative / zero / arbitrary bets: a negative bet would
+    otherwise pass the `bet > balance` guard and *credit* the player (balance -
+    (-x) = balance + x), minting money on both /spin and /buy-bonus.
+    """
+    if bet not in AVAILABLE_BETS:
+        raise HTTPException(status_code=400, detail="Invalid bet")
+
 # Cost = bet × this multiplier (must match BUY_BONUS_MULTIPLIER in frontend).
 # Priced at the feature's fair value: a bought feature is FREE_SPINS_COUNT free
-# spins (plus re-triggers) worth ~9.65× bet at the base rate, so a ~10× cost
-# gives the bonus buy the same ~96.5% RTP as the base game. (At the old 80× the
-# bonus buy returned only ~12% — a player trap.)
+# spins (plus re-triggers) worth ~9.70× bet at the base rate (T≈10.70 spins ×
+# ~0.907 base line RTP), so a ~10× cost gives the bonus buy the same ~97.0% RTP
+# as the base game. (At the old 80× the bonus buy returned only ~12% — a trap.)
 BUY_BONUS_MULTIPLIER = 10
 
 
@@ -57,6 +68,7 @@ def spin(req: SpinRequest) -> SpinResponse:
         session.free_spins_remaining -= 1
         bet = session.free_spin_bet            # stake locked at trigger / bonus buy
     else:
+        _validate_bet(req.bet)
         if req.bet > session.balance:
             raise HTTPException(status_code=400, detail="Insufficient balance")
         session.balance = round(session.balance - req.bet, 2)
@@ -68,10 +80,12 @@ def spin(req: SpinRequest) -> SpinResponse:
     grid = build_grid(session.reel_strips)
     winlines, total_win, teasing_reels, free_spins_awarded = evaluate_spin(grid, bet)
 
-    # Award / re-trigger free spins. A base spin locks the stake the whole
-    # feature is played at; a re-trigger only extends the remaining count.
+    # Award / re-trigger free spins. The stake is locked only when a FRESH
+    # feature starts (a base spin with no free spins already pending); a
+    # re-trigger — whether from a free spin or a base spin played while spins are
+    # still pending — only extends the count, never re-stakes the locked bet.
     if free_spins_awarded > 0:
-        if not req.isFreeSpins:
+        if not req.isFreeSpins and session.free_spins_remaining == 0:
             session.free_spin_bet = bet
         session.free_spins_remaining += free_spins_awarded
 
@@ -128,7 +142,7 @@ def session_stats(session_id: str) -> dict:
         "totalWagered":          wagered,
         "totalWon":              won_total,
         "observedRTP":           obs_rtp,
-        "theoreticalRTP":        0.969,
+        "theoreticalRTP":        0.970,
         "hitFrequency":          hit_freq,
         "scatterTriggers":       scatters,
         "observedScatterRate":   scat_rate,
@@ -140,6 +154,13 @@ def session_stats(session_id: str) -> dict:
 @router.post("/buy-bonus", response_model=SpinResponse)
 def buy_bonus(req: BuyBonusRequest) -> SpinResponse:
     session = _resolve_session(req.sessionId)
+
+    _validate_bet(req.bet)
+    # Refuse to buy while a feature is already running — otherwise this would
+    # overwrite free_spin_bet and re-stake the already-earned spins at a new
+    # (possibly far larger) bet, repaying them at an inflated rate.
+    if session.free_spins_remaining > 0:
+        raise HTTPException(status_code=400, detail="Cannot buy bonus while free spins remain")
 
     cost = round(req.bet * BUY_BONUS_MULTIPLIER, 2)
     if cost > session.balance:
