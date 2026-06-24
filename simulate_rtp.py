@@ -61,7 +61,7 @@ def _volatility_class(std_dev: float) -> str:
 
 # ── Maximum theoretical win (single spin) ─────────────────────────────────────
 # All 15 cells = WILD → every payline matches WILD 5x → 20 × WILD_5x × line_bet
-# = 20 × 7148 × (bet/20) = 7148 × bet.  Per the engine's _cap_scatters, this is
+# = 20 × 7415 × (bet/20) = 7415 × bet.  Per the engine's _cap_scatters, this is
 # only achievable if no scatter lands (otherwise scatter trigger zeros wins).
 def _max_single_spin_win() -> float:
     return LINE_COUNT * PAYOUTS["wild"][5] / LINE_COUNT   # = WILD_5x multiplier
@@ -338,14 +338,14 @@ def simulate(n_paid: int) -> None:
         print(f"  {label:<26}  {count:>10,}  {pct:>9.3f}%  {one_in:>10}")
 
     # ── Maximum theoretical / observed win ─────────────────────────────────────
-    # The "all 15 cells WILD" grid (which would pay 20 lines × WILD 5x = 2580x bet)
+    # The "all 15 cells WILD" grid (which would pay 20 lines × WILD 5x = 7415x bet)
     # is IMPOSSIBLE with these strips: reels 0/2/4 carry a single WILD each, so a
     # reel's 3-cell window can never show more than one wild — a reel (let alone the
     # whole grid) can never be filled with wilds.
     per_line_max = PAYOUTS["wild"][5] / LINE_COUNT   # one 5-wild payline, in × bet
     print()
     print(f"  ─── Maximum win analysis ───")
-    print(f"  All-WILD grid (would be 7148x)  : IMPOSSIBLE  "
+    print(f"  All-WILD grid (would be 7415x)  : IMPOSSIBLE  "
           f"(reels 0/2/4 have 1 wild; a 3-cell window shows <=1 wild)")
     print(f"  Single payline maximum (WILD 5x): {per_line_max:>10.2f}x bet  "
           f"(five wilds on one line — already extremely rare)")

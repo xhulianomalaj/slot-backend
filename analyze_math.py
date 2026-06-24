@@ -237,29 +237,54 @@ print("\n+- THEORETICAL RTP ------------------------------------------------+")
 print()
 print(f"  Base payline RTP (unzeroed, EXACT): {float(rtp)*100:.4f}%")
 print()
-# Total-RTP model.
+# Total-RTP model (EXACT for the fixed certified reelset).
 #
-# 1. Scatter-zeroing: when >=3 scatters land on a PAID spin the engine returns
-#    0 payline wins.  The exact zeroed base is base_rtp - E[line win . 1{trigger}].
-#    That coupling is across the whole grid (not a single line), so it is left to
-#    the Monte-Carlo; here we bracket it.  Trigger spins carry scatters that block
-#    lines, so the loss is SMALL (well under base_rtp * P_trigger).
-#
+# 1. Scatter-zeroing: when >=3 scatters land the engine returns 0 payline wins.
+#    Because the reelset is FIXED (not reshuffled), this void is exactly
+#    computable: enumerate every grid with >=3 scatter-showing reels and sum the
+#    payline wins it voids.  zeroed_base = unzeroed_base - void.
 # 2. Free spins (10 per trigger) pay at the same per-spin rate and can re-trigger,
-#    so expected (paid + free) spins per paid spin = 1 / (1 - FREE_SPINS_COUNT*P).
-#
-# We report the total WITHOUT the zeroing loss (a mild over-estimate) and WITH a
-# crude base*(1-P) zeroing proxy (a mild under-estimate); the true value sits
-# between, and the Monte-Carlo in simulate_rtp.py is the authoritative figure.
+#    so total = zeroed_base / (1 - FREE_SPINS_COUNT*P).
 from engine.evaluator import FREE_SPINS_COUNT as _FS
+from engine.reel_strips import REEL_STRIPS
+from itertools import combinations as _comb, product as _prod
 pt = float(p_trigger)
-mult_fs = 1.0 / (1.0 - _FS * pt)             # geometric free-spin multiplier
-total_hi = float(rtp) * mult_fs                       # ignores scatter-zeroing loss
-total_lo = float(rtp) * (1 - pt) * mult_fs            # crude (1-P) zeroing proxy
+mult_fs = 1.0 / (1.0 - _FS * pt)             # geometric free-spin multiplier = 1 + t*T
+
+
+def _exact_void(strips: list[list[str]]) -> float:
+    """Exact scatter-void RTP for a FIXED reelset = E[summed line wins · 1{>=3 scatter}].
+
+    A reel shows its single scatter in exactly 3 of its 33 windows.  Enumerate
+    every grid with >=3 scatter-showing reels (255,393 of them) and sum the
+    payline wins those spins void; divide by LINE_COUNT and 33**5.
+    """
+    scat: list[list] = []
+    non: list[list] = []
+    for st in strips:
+        n = len(st)
+        wins = [(st[i], st[(i + 1) % n], st[(i + 2) % n]) for i in range(n)]
+        scat.append([w for w in wins if SCATTER in w])
+        non.append([w for w in wins if SCATTER not in w])
+    vs = 0
+    for r in range(3, 6):
+        for combo in _comb(range(5), r):
+            chosen = set(combo)
+            choices = [scat[i] if i in chosen else non[i] for i in range(5)]
+            for g in _prod(*choices):
+                for pl in PAYLINES:
+                    sym, k = line_outcome([g[reel][pl[reel]] for reel in range(5)])
+                    if sym is not None:
+                        vs += PAYOUTS[sym][k]
+    return vs / LINE_COUNT / (len(strips[0]) ** 5)
+
+
+void = _exact_void(REEL_STRIPS)
+exact_total = (float(rtp) - void) * mult_fs
 print(f"  Scatter trigger P(>=3) = {pt*100:.4f}%   free-spin multiplier 1/(1-{_FS}*P) = {mult_fs:.4f}")
-print(f"  Total RTP estimate (closed-form bracket): {total_lo*100:.3f}%  ..  {total_hi*100:.3f}%")
-print(f"  --> Monte-Carlo (simulate_rtp.py) is authoritative; it lands at ~97.0%.")
-print(f"  Target band: 96.5-97.5%   {'IN RANGE' if 0.965 <= total_hi <= 0.975 else 'OUT OF RANGE'}")
+print(f"  Scatter-void (fixed reelset, EXACT) = {void*100:.4f}%   ->  zeroed base = {(float(rtp)-void)*100:.4f}%")
+print(f"  *** EXACT certified total RTP (fixed reelset) = {exact_total*100:.4f}% ***")
+print(f"  Target band: 96.5-97.5%   {'IN RANGE' if 0.965 <= exact_total <= 0.975 else 'OUT OF RANGE'}")
 print()
 print("  RTP breakdown by symbol (base game, paylines only):")
 print(f"  {'Symbol':<10}  {'RTP contrib (x3)':>18}  {'RTP contrib (x4)':>18}  {'RTP contrib (x5)':>18}")

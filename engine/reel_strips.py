@@ -26,22 +26,27 @@ STRIP_WEIGHTS: list[dict[str, int]] = [
     {CHERRY: 8, LEMON: 7, ORANGE: 5, PLUM: 4, BELL: 3, BAR: 3, SEVEN: 1, WILD: 1, SCATTER: 1},
 ]
 
-
-def build_strip(weights: dict[str, int]) -> list[str]:
-    """Expand symbol weights into a flat strip, then shuffle (Fisher-Yates)."""
-    strip: list[str] = []
-    for symbol, count in weights.items():
-        strip.extend([symbol] * count)
-    random.shuffle(strip)
-    return strip
+# ─── Certified fixed reelset ──────────────────────────────────────────────────
+# The live game uses a FIXED, certified reel ORDER — it is NOT reshuffled per
+# session — so the RTP is a single deterministic number: 96.98% (exact, see
+# analyze_math.py). Each strip has exactly the composition in STRIP_WEIGHTS above
+# (33 stops, 1 scatter); only the arrangement is frozen. This array MUST stay
+# byte-identical to the mock's REEL_STRIPS in my-slot
+# (src/infrastructure/network/MockNetworkManager.ts) so client and server
+# evaluate the same reels. STRIP_WEIGHTS is kept for the composition-only maths
+# in analyze_math.py.
+REEL_STRIPS: list[list[str]] = [
+    ["lemon", "bar", "orange", "bell", "seven", "seven", "bell", "cherry", "lemon", "plum", "scatter", "orange", "lemon", "bar", "cherry", "wild", "cherry", "cherry", "bell", "orange", "lemon", "lemon", "plum", "bar", "plum", "cherry", "bell", "orange", "orange", "lemon", "plum", "cherry", "cherry"],
+    ["lemon", "bell", "bell", "bell", "cherry", "orange", "bar", "plum", "orange", "lemon", "cherry", "orange", "scatter", "orange", "seven", "lemon", "plum", "bar", "cherry", "seven", "bar", "lemon", "wild", "lemon", "plum", "bell", "cherry", "lemon", "orange", "plum", "wild", "cherry", "cherry"],
+    ["cherry", "cherry", "bar", "orange", "bell", "orange", "lemon", "plum", "orange", "bell", "plum", "bell", "lemon", "cherry", "plum", "bar", "bell", "lemon", "lemon", "cherry", "seven", "cherry", "lemon", "bar", "lemon", "cherry", "plum", "scatter", "wild", "seven", "orange", "cherry", "orange"],
+    ["bar", "plum", "orange", "plum", "lemon", "orange", "lemon", "seven", "cherry", "bell", "wild", "bell", "orange", "bar", "lemon", "seven", "lemon", "cherry", "bar", "cherry", "scatter", "lemon", "cherry", "bell", "plum", "orange", "plum", "wild", "cherry", "bell", "cherry", "orange", "lemon"],
+    ["cherry", "plum", "scatter", "plum", "orange", "orange", "cherry", "bar", "seven", "bar", "wild", "cherry", "cherry", "orange", "lemon", "cherry", "lemon", "lemon", "cherry", "lemon", "bell", "bell", "bell", "orange", "orange", "lemon", "cherry", "plum", "lemon", "bar", "plum", "lemon", "cherry"],
+]
 
 
 def build_all_strips(num_reels: int = 5) -> list[list[str]]:
-    """Build one strip per reel, cycling STRIP_WEIGHTS if num_reels > 5."""
-    return [
-        build_strip(STRIP_WEIGHTS[i % len(STRIP_WEIGHTS)])
-        for i in range(num_reels)
-    ]
+    """Return the fixed certified reelset (fresh copies), cycling if num_reels > 5."""
+    return [list(REEL_STRIPS[i % len(REEL_STRIPS)]) for i in range(num_reels)]
 
 
 def spin_reel(strip: list[str]) -> list[str]:

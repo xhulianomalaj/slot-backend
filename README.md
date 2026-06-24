@@ -5,9 +5,11 @@ spin outcome is generated and evaluated server-side; the client merely renders
 what the server returns. Fully verifiable RTP, hit frequency, and volatility
 via two independent tools (closed-form analysis + Monte Carlo simulation).
 
-> **Certified RTP: 97.0 %** (20,000,000-spin Monte Carlo, ± 0.17 % at 95 % CI)
-> Volatility: **MEDIUM** (σ / bet ≈ 3.9–4.0) — popular-slot LDW profile with a
-> steep, rare top tail. See [`MATH_MODEL.md`](MATH_MODEL.md).
+> **Certified RTP: 96.98 %** (deterministic — exact closed-form on the fixed
+> certified reelset, confirmed by a 20,000,000-spin Monte Carlo at 96.955 %)
+> Volatility: **MEDIUM** (σ / bet ≈ 4.23), hit frequency **42.55 %** —
+> popular-slot LDW profile with a steep, rare top tail.
+> See [`MATH_MODEL.md`](MATH_MODEL.md).
 
 ---
 
@@ -58,7 +60,7 @@ slot-backend/
 │   └── routes.py        /session, /spin, /buy-bonus, /session/<id>/stats
 ├── engine/
 │   ├── symbols.py       Symbol identifiers
-│   ├── reel_strips.py   Strip composition + Fisher–Yates build + stop pick
+│   ├── reel_strips.py   Fixed certified reel strips + uniform stop pick
 │   ├── paytable.py      20 paylines + symbol multipliers
 │   ├── evaluator.py     Payline + scatter evaluation
 │   └── session.py       In-memory session store + spin log
