@@ -27,36 +27,51 @@ def _evaluate_payline(
 ) -> dict | None:
     symbols = [grid[reel][row] for reel, row in enumerate(payline)]
 
-    # Base symbol = first non-wild, non-scatter reading left-to-right.
-    # An all-wild line pays as wild.
-    base = next((s for s in symbols if s not in (WILD, SCATTER)), None)
-    if base is None:
-        base = WILD if symbols[0] == WILD else None
-    if base is None:
-        return None
+    # A line pays the BETTER of two candidate combinations (standard slot rule):
+    #   1. Substituted win — the first non-wild, non-scatter symbol, with wilds
+    #      extending the run from reel 0.
+    #   2. Pure-wild prefix — leading wilds paying as WILD in their own right.
+    # max(...) matters when a short run of high-paying wilds beats the longer
+    # substituted run (e.g. 3 wilds = WILD x3 (103) > LEMON x5 (52)).
+    best_symbol: str | None = None
+    best_count = 0
+    best_multiplier = 0.0
 
-    # Count the run from reel 0 — wilds extend the run.
-    count = 0
+    # Candidate 1 — substituted symbol.
+    base = next((s for s in symbols if s not in (WILD, SCATTER)), None)
+    if base is not None:
+        count = 0
+        for s in symbols:
+            if s == base or s == WILD:
+                count += 1
+            else:
+                break
+        if count >= 3:
+            m = PAYOUTS.get(base, {}).get(min(count, 5))
+            if m and m > best_multiplier:
+                best_symbol, best_count, best_multiplier = base, min(count, 5), m
+
+    # Candidate 2 — pure-wild prefix (also covers an all-wild line).
+    wild_count = 0
     for s in symbols:
-        if s == base or s == WILD:
-            count += 1
+        if s == WILD:
+            wild_count += 1
         else:
             break
+    if wild_count >= 3:
+        m = PAYOUTS[WILD].get(min(wild_count, 5))
+        if m and m > best_multiplier:
+            best_symbol, best_count, best_multiplier = WILD, min(wild_count, 5), m
 
-    if count < 3:
+    if best_symbol is None or best_count < 3:
         return None
 
-    match_count = min(count, 5)
-    multiplier = PAYOUTS.get(base, {}).get(match_count)
-    if not multiplier:
-        return None
-
-    amount = round(line_bet * multiplier, 2)
-    positions = [{"reel": r, "row": payline[r]} for r in range(match_count)]
+    amount = round(line_bet * best_multiplier, 2)
+    positions = [{"reel": r, "row": payline[r]} for r in range(best_count)]
     return {
         "lineId": line_id,
-        "symbolId": base,
-        "matchCount": match_count,
+        "symbolId": best_symbol,
+        "matchCount": best_count,
         "amount": amount,
         "positions": positions,
     }

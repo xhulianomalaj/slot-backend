@@ -20,6 +20,12 @@ class Session:
     rounds_played: int = 0
     total_wagered: float = 0.0
     total_won: float = 0.0
+    # Server-authoritative free-spin state. free_spins_remaining is the number
+    # of free spins the player has earned but not yet played; free_spin_bet is
+    # the stake the feature is locked to (set when the feature is triggered or
+    # bought) so the client cannot change bet size mid-feature.
+    free_spins_remaining: int = 0
+    free_spin_bet: float = 0.0
     # Per-spin log — used by the /stats endpoint for math verification.
     # Each entry: {n, bet, free, win, scatter, bal}
     spin_log: list[dict] = field(default_factory=list)

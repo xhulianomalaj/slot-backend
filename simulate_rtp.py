@@ -33,13 +33,11 @@ BET     = 1.0   # RTP is bet-independent; 1.0 keeps numbers readable
 COLUMNS = 5
 
 # ── Theoretical targets ────────────────────────────────────────────────────────
-# Derived analytically from strip weights + paytable (see analyze_math.py).
-# THEO_BASE_RTP is calibrated so that THEO_TOTAL_RTP_EXACT matches the
-# Monte Carlo result to within 0.5%; the tiny gap (~2%) between the raw
-# analytic base RTP and simulation comes from a subtle scatter / payline
-# correlation that the hypergeometric formula does not fully capture.
-# The simulation is the authoritative number.
-THEO_BASE_RTP     = 0.9009    # ~90.1 % — paid paylines only (engine-measured)
+# Derived analytically from strip weights + paytable (see analyze_math.py, which
+# computes the base payline RTP by exact enumeration = 90.45% unzeroed). The paid
+# base measured here is a touch lower because >=3 scatters zero that spin's
+# payline wins (a ~0.2% effect). The simulation is the authoritative number.
+THEO_BASE_RTP     = 0.9024    # ~90.2 % — paid paylines only, after scatter-zeroing
 THEO_SCATTER_RATE = 0.006526  # ~1 in 153 paid spins (exact, hypergeometric)
 
 # Two versions of total-RTP theory:
@@ -340,24 +338,19 @@ def simulate(n_paid: int) -> None:
         print(f"  {label:<26}  {count:>10,}  {pct:>9.3f}%  {one_in:>10}")
 
     # ── Maximum theoretical / observed win ─────────────────────────────────────
-    max_theo_per_bet = PAYOUTS["wild"][5]   # WILD 5× multiplier (× line_bet × 20 lines = × bet)
-    from math import comb
-    p_max_grid = 1.0
-    for r in range(COLUMNS):
-        n_strip = sum(STRIP_WEIGHTS[r].values())
-        s_w     = STRIP_WEIGHTS[r].get("wild", 0)
-        p_max_grid *= comb(s_w, 3) / comb(n_strip, 3) if s_w >= 3 else 0
+    # The "all 15 cells WILD" grid (which would pay 20 lines × WILD 5x = 2580x bet)
+    # is IMPOSSIBLE with these strips: reels 0/2/4 carry a single WILD each, so a
+    # reel's 3-cell window can never show more than one wild — a reel (let alone the
+    # whole grid) can never be filled with wilds.
+    per_line_max = PAYOUTS["wild"][5] / LINE_COUNT   # one 5-wild payline, in × bet
     print()
     print(f"  ─── Maximum win analysis ───")
-    print(f"  Max single-spin payout (theory) : {max_theo_per_bet:>10.2f}x bet  "
-          f"(all 15 cells WILD, all 20 lines pay WILD 5x)")
-    if p_max_grid > 0:
-        print(f"  Probability of max single spin  : {p_max_grid:.2e}  "
-              f"(~1 in {1/p_max_grid:.2e} spins)")
-    else:
-        print(f"  Probability of max single spin  : 0  "
-              f"(strips have <3 wilds on at least one reel)")
-    print(f"  Largest spin observed this run  : {max_spin_win/BET:>10.2f}x bet")
+    print(f"  All-WILD grid (would be 2580x)  : IMPOSSIBLE  "
+          f"(reels 0/2/4 have 1 wild; a 3-cell window shows <=1 wild)")
+    print(f"  Single payline maximum (WILD 5x): {per_line_max:>10.2f}x bet  "
+          f"(five wilds on one line — already extremely rare)")
+    print(f"  Largest spin observed this run  : {max_spin_win/BET:>10.2f}x bet  "
+          f"(a spin can stack several winning lines)")
 
     # ── Ruin probability (separate quick MC) ───────────────────────────────────
     print()

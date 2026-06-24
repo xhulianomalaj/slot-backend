@@ -7,14 +7,18 @@ from api.models import (
     SpinRequest,
     SpinResponse,
 )
-from engine.evaluator import build_grid, evaluate_spin
+from engine.evaluator import FREE_SPINS_COUNT, build_grid, evaluate_spin
 from engine.session import DEFAULT_BET, Session, create_session, get_session
 from engine.symbols import SCATTER
 
 router = APIRouter()
 
 # Cost = bet × this multiplier (must match BUY_BONUS_MULTIPLIER in frontend).
-BUY_BONUS_MULTIPLIER = 80
+# Priced at the feature's fair value: a bought feature is FREE_SPINS_COUNT free
+# spins (plus re-triggers) worth ~9.65× bet at the base rate, so a ~10× cost
+# gives the bonus buy the same ~96.5% RTP as the base game. (At the old 80× the
+# bonus buy returned only ~12% — a player trap.)
+BUY_BONUS_MULTIPLIER = 10
 
 
 def _resolve_session(session_id: str | None) -> Session:
@@ -45,22 +49,37 @@ def start_session(req: SessionRequest) -> SessionResponse:
 def spin(req: SpinRequest) -> SpinResponse:
     session = _resolve_session(req.sessionId)
 
-    if not req.isFreeSpins:
+    if req.isFreeSpins:
+        # Free spins are server-authoritative: the client cannot claim a free
+        # spin it did not earn, and cannot change the stake mid-feature.
+        if session.free_spins_remaining <= 0:
+            raise HTTPException(status_code=400, detail="No free spins remaining")
+        session.free_spins_remaining -= 1
+        bet = session.free_spin_bet            # stake locked at trigger / bonus buy
+    else:
         if req.bet > session.balance:
             raise HTTPException(status_code=400, detail="Insufficient balance")
         session.balance = round(session.balance - req.bet, 2)
         session.total_wagered = round(session.total_wagered + req.bet, 2)
+        bet = req.bet
 
     session.rounds_played += 1
 
     grid = build_grid(session.reel_strips)
-    winlines, total_win, teasing_reels, free_spins_awarded = evaluate_spin(grid, req.bet)
+    winlines, total_win, teasing_reels, free_spins_awarded = evaluate_spin(grid, bet)
+
+    # Award / re-trigger free spins. A base spin locks the stake the whole
+    # feature is played at; a re-trigger only extends the remaining count.
+    if free_spins_awarded > 0:
+        if not req.isFreeSpins:
+            session.free_spin_bet = bet
+        session.free_spins_remaining += free_spins_awarded
 
     session.balance   = round(session.balance + total_win, 2)
     session.total_won = round(session.total_won + total_win, 2)
     session.spin_log.append({
         "n":       session.rounds_played,
-        "bet":     req.bet,
+        "bet":     bet,
         "free":    req.isFreeSpins,
         "win":     total_win,
         "scatter": free_spins_awarded > 0,
@@ -109,7 +128,7 @@ def session_stats(session_id: str) -> dict:
         "totalWagered":          wagered,
         "totalWon":              won_total,
         "observedRTP":           obs_rtp,
-        "theoreticalRTP":        0.9650,
+        "theoreticalRTP":        0.969,
         "hitFrequency":          hit_freq,
         "scatterTriggers":       scatters,
         "observedScatterRate":   scat_rate,
@@ -130,6 +149,11 @@ def buy_bonus(req: BuyBonusRequest) -> SpinResponse:
     session.total_wagered = round(session.total_wagered + cost, 2)
     session.rounds_played += 1
 
+    # Grant the free-spin feature server-side, stake locked to this bet, so the
+    # follow-up isFreeSpins spins are authorized and paid at the right stake.
+    session.free_spin_bet = req.bet
+    session.free_spins_remaining += FREE_SPINS_COUNT
+
     # Guarantee 3 scatters on reels 0, 2, 4 (middle row) — same as mock.
     grid = build_grid(session.reel_strips)
     for reel in (0, 2, 4):
@@ -140,6 +164,6 @@ def buy_bonus(req: BuyBonusRequest) -> SpinResponse:
         totalWin=0,
         winlines=[],
         teasingReels=[],
-        freeSpinsAwarded=10,
+        freeSpinsAwarded=FREE_SPINS_COUNT,
         balance=session.balance,
     )

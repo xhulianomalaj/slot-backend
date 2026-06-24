@@ -1,12 +1,12 @@
-# Slot Backend — Mathematically Certified Game Server
+# Slot Backend — Game Server
 
 A FastAPI backend that powers a 5-reel × 3-row, 20-payline video slot. Every
 spin outcome is generated and evaluated server-side; the client merely renders
 what the server returns. Fully verifiable RTP, hit frequency, and volatility
 via two independent tools (closed-form analysis + Monte Carlo simulation).
 
-> **Certified RTP: 96.5 %** (1,000,000-spin Monte Carlo, ± 0.53 % at 95 % CI)
-> Volatility: **LOW** (σ / bet = 2.73) — see [`MATH_MODEL.md`](MATH_MODEL.md).
+> **Certified RTP: 96.9 %** (5,000,000-spin Monte Carlo, ± 0.23 % at 95 % CI)
+> Volatility: **LOW** (σ / bet = 2.60) — see [`MATH_MODEL.md`](MATH_MODEL.md).
 
 ---
 
